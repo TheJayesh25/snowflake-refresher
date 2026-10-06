@@ -163,3 +163,110 @@ DROP VIEW IF EXISTS SALARY_BY_DEPT;
 DROP MATERIALIZED VIEW IF EXISTS MAT_SALARY_BY_DEPT;
 
 ALTER SESSION SET USE_CACHED_RESULT = FALSE;
+
+
+
+--==============STAGES==============
+-- Create an Employee Table
+CREATE OR REPLACE TABLE employees (
+    emp_id INTEGER,
+    emp_name VARCHAR (50),
+    dept VARCHAR(50),
+    salary INTEGER
+);
+
+-- Accessing Table stage
+LIST @%EMPLOYEES;
+
+-- Accessing User stage
+CREATE USER tj_test;
+SHOW USERS;
+
+LIST @~;
+
+DROP USER tj_test;
+
+SHOW USERS;
+
+DROP TABLE employees;
+
+-- Creating a customer Table
+
+CREATE OR REPLACE TABLE customer(MY_DATABASE.MY_SCHEMA.CUSTOMER_STAGE
+    cust_id INT,
+    cust_name VARCHAR(50),
+    cust_gender STRING,
+    cust_age INT
+);
+
+-- Creating a NAMED Stage
+CREATE OR REPLACE STAGE CUSTOMER_STAGE;
+
+-- Access internal stage
+LIST @CUSTOMER_STAGE;
+
+-- Truncate Customer Table
+TRUNCATE TABLE CUSTOMER;
+
+-- Loading data into CUSTOMER table
+COPY INTO CUSTOMER
+FROM @CUSTOMER_STAGE
+file_format = (TYPE = 'CSV' SKIP_HEADER = 1);
+
+-- View table data
+SELECT *
+FROM CUSTOMER
+LIMIT 15;
+
+-- UNDROP SCHEMA MY_DATABASE.MY_SCHEMA;
+
+-- Creating Student table
+CREATE OR REPLACE TABLE STUDENT (
+    student_id INT,
+    name VARCHAR(50),
+    age INT,
+    marks INT   
+);
+
+-- Create named student stage
+CREATE OR REPLACE STAGE STUDENT_STAGE;
+
+SHOW FILE FORMATS;
+
+-- Create a CSV file format
+CREATE OR REPLACE FILE FORMAT CSV_FORMAT
+TYPE = 'CSV'
+FIELD_DELIMITER = ','
+RECORD_DELIMITER = '\n'
+SKIP_HEADER = 1;
+
+-- List file formats
+SHOW FILE FORMATS;
+
+-- Load data into student table with file format
+COPY INTO STUDENT
+FROM @STUDENT_STAGE
+file_format = (FORMAT_NAME = CSV_FORMAT);
+
+-- Check newly loaded data
+SELECT *
+FROM STUDENT;
+
+-- Create a JSON file format
+CREATE FILE FORMAT JSON_FORMAT
+TYPE = 'JSON';
+
+DROP FILE FORMAT CSV_FORMAT;
+DROP FILE FORMAT JSON_FORMAT;
+
+SHOW FILE FORMATS;
+
+
+DROP TABLE IF EXISTS CUSTOMER;
+DROP TABLE IF EXISTS STUDENT;
+
+DROP STAGE IF EXISTS CUSTOMER_STAGE;
+DROP STAGE IF EXISTS STUDENT_STAGE;
+
+ALTER SESSION SET USE_CACHED_RESULT = FALSE;
+
