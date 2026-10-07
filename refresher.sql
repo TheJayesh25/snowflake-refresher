@@ -270,3 +270,74 @@ DROP STAGE IF EXISTS STUDENT_STAGE;
 
 ALTER SESSION SET USE_CACHED_RESULT = FALSE;
 
+
+-- Testing Different ways of Bulk Data load and Continuous Data Load
+CREATE OR REPLACE TABLE USER (
+    id INT,
+    name VARCHAR(50),
+    location VARCHAR(50),
+    email VARCHAR(50)
+);
+
+
+-- Create a storage integration with S3 and IAM role
+CREATE OR REPLACE STORAGE INTEGRATION s3_int
+    TYPE = EXTERNAL_STAGE
+    STORAGE_PROVIDER = 'S3'
+    ENABLED = TRUE
+    STORAGE_AWS_ROLE_ARN = <AWS_ROLE_ARN>
+    STORAGE_ALLOWED_LOCATIONS = ('s3://snowflake-refresher/');
+
+
+-- Describe storage integration
+DESC INTEGRATION s3_int; -- To find out STORAGE_AWS_IAM_USER_ARN and STORAGE_AWS_EXTERNAL_ID values to update those values in Trust Relationship policy for the role in AWS
+
+
+SHOW FILE FORMATS; -- CSV_FORMAT already exists to load the csv file from S3 bucket
+DROP FILE FORMAT CSV_FORMAT;
+DROP FILE FORMAT JSON_FORMAT;
+SHOW FILE FORMATS; -- CSV_FORMAT already exists to load the csv file from S3 bucket
+
+-- Create a file format
+CREATE OR REPLACE FILE FORMAT my_csv_format
+TYPE = 'CSV'
+FIELD_DELIMITER = ','
+RECORD_DELIMITER = '\n'
+SKIP_HEADER = 1;
+
+-- List file formats
+SHOW FILE FORMATS;
+
+-- Create an external S3 stage
+CREATE OR REPLACE STAGE s3_stage
+    STORAGE_INTEGRATION = s3_int
+    URL = 's3://snowflake-refresher/'
+    FILE_FORMAT = MY_CSV_FORMAT;
+
+-- Validate the storage integration to see if the trust relationship is working
+SELECT SYSTEM$VALIDATE_STORAGE_INTEGRATION(
+    'S3_INT',
+    's3://snowflake-refresher/',
+    'test.txt',
+    'list'
+);
+
+
+LIST @s3_stage;
+
+-- SELECT CURRENT_ACCOUNT();
+
+-- Load data into User table without file format
+COPY INTO USER
+FROM @s3_stage
+FILE_FORMAT = (FORMAT_NAME = MY_CSV_FORMAT);
+
+-- Check if file is loaded correctly
+SELECT * FROM USER;
+
+-- SHOW LOCKS IN ACCOUNT;
+
+-- SELECT SYSTEM$ABORT_SESSION('60c3af72-ea05-4377-aa3d-71a262a547ba');
+
+
+
